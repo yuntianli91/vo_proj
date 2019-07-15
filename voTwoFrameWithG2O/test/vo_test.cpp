@@ -4,9 +4,10 @@
  * @Github: https://github.com/yuntinali91
  * @Date: 2019-07-12 14:04:11
  * @LastEditors: Yuntian Li
- * @LastEditTime: 2019-07-14 19:07:41
+ * @LastEditTime: 2019-07-15 10:03:32
  */
 #include "vo/config.h"
+#include "vo/dataset_io.h"
 #include "vo/traj_point.h"
 #include "vo/visual_odometry.h"
 using namespace Eigen;
@@ -26,62 +27,63 @@ int main(int argc, char** argv){
 
     string dataset_dir = vo::Config::getParam<string>( "dataset_dir" );
     cout<<"dataset: "<<dataset_dir<<endl;
-    ifstream fin ( dataset_dir + "/associate.txt" );
-    if ( !fin )
-    {
-        cout<<"please generate the associate file called associate.txt!"<<endl;
-        return 1;
-    }
+    // ifstream fin ( dataset_dir + "/associate.txt" );
+    // if ( !fin )
+    // {
+    //     cout<<"please generate the associate file called associate.txt!"<<endl;
+    //     return 1;
+    // }
     // ======================== read rgb and depth files ======================== //
     vector<string> rgb_files, depth_files;
     vector<double> rgb_times, depth_times;
-    while ( fin.peek() != EOF )
-    {
-        string rgb_time, rgb_file, depth_time, depth_file;
-        fin>>rgb_time>>rgb_file>>depth_time>>depth_file;
-        rgb_times.push_back ( atof ( rgb_time.c_str() ) );
-        depth_times.push_back ( atof ( depth_time.c_str() ) );
-        rgb_files.push_back ( dataset_dir+"/"+rgb_file );
-        depth_files.push_back ( dataset_dir+"/"+depth_file );
+    // while ( fin.peek() != EOF )
+    // {
+    //     string rgb_time, rgb_file, depth_time, depth_file;
+    //     fin>>rgb_time>>rgb_file>>depth_time>>depth_file;
+    //     rgb_times.push_back ( atof ( rgb_time.c_str() ) );
+    //     depth_times.push_back ( atof ( depth_time.c_str() ) );
+    //     rgb_files.push_back ( dataset_dir+"/"+rgb_file );
+    //     depth_files.push_back ( dataset_dir+"/"+depth_file );
 
-        if ( fin.good() == false )
-            break;
-    }
-    // release ifstrean
-    fin.clear();
-    fin.close();
+    //     if ( fin.good() == false )
+    //         break;
+    // }
+    // // release ifstrean
+    // fin.clear();
+    // fin.close();
+    vo::DatasetIO::readAssociateRGBD(dataset_dir, rgb_times, rgb_files, depth_times, depth_files);
     // ======================== read ground truth ================================ //
-    fin.open(dataset_dir + "/groundtruth.txt");
+//     fin.open(dataset_dir + "/groundtruth.txt");
 
-    if ( !fin.is_open()){
-        cout << "can not open ground truth file !" << endl;
-    }
-    double time, tx, ty, tz, qx, qy, qz, qw;
+//     if ( !fin.is_open()){
+//         cout << "can not open ground truth file !" << endl;
+//     }
+//     double time, tx, ty, tz, qx, qy, qz, qw;
     
-    int count = 0;
+//     int count = 0;
     
-    // vector<Eigen::Quaterniond> traj_quat;
-    // vector<Eigen::Vector3d> traj_translation;
-    vector<vo::TrajPoint::Ptr> traj_pts;
+//     // vector<Eigen::Quaterniond> traj_quat;
+//     // vector<Eigen::Vector3d> traj_translation;
+//     vector<vo::TrajPoint::Ptr> traj_pts;
 
-    while ( fin.peek() != EOF){
-        if (count <3){
-            string file_head;
-            getline(fin, file_head);
-            count ++;   
-        }
-        else{
-            fin >> time >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
-            vo::TrajPoint::Ptr traj_ptr(new vo::TrajPoint);
-            traj_ptr->time_stamp_ = time;
-            traj_ptr->translation_ = Vector3d(tx, ty, tz);
-            traj_ptr->quaternion_ = Quaterniond(qw, qx, qy, qz);
-            traj_pts.push_back(traj_ptr);
-        }
-   }
-    // release ifstream
-    fin.clear();
-    fin.close();
+//     while ( fin.peek() != EOF){
+//         if (count <3){
+//             string file_head;
+//             getline(fin, file_head);
+//             count ++;   
+//         }
+//         else{
+//             fin >> time >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
+//             vo::TrajPoint::Ptr traj_ptr(new vo::TrajPoint);
+//             traj_ptr->time_stamp_ = time;
+//             traj_ptr->translation_ = Vector3d(tx, ty, tz);
+//             traj_ptr->quaternion_ = Quaterniond(qw, qx, qy, qz);
+//             traj_pts.push_back(traj_ptr);
+//         }
+//    }
+//     // release ifstream
+//     fin.clear();
+//     fin.close();
     // ======================== odometry main body =============================== //
     vo::Camera::Ptr camera(new vo::Camera);
 
@@ -98,7 +100,8 @@ int main(int argc, char** argv){
     vis.showWidget( "Camera", camera_coor );
 
     cout<<"read total "<<rgb_files.size() <<" entries"<<endl;
-    ofstream fout(dataset_dir + "/estimated_g2o.txt");
+    // ofstream fout(dataset_dir + "/estimated_g2o.txt");
+
     for ( unsigned long i=0; i<rgb_files.size()-1; i++ )
     {
         cv::Mat color = cv::imread ( rgb_files[i] );
@@ -121,13 +124,14 @@ int main(int argc, char** argv){
         cout << "translation is:" << pFrame->T_c_w_.translation() << endl;
         // write estimated T to file;
         // use "fixed" to output decimal
-        Vector3d estimated_trans = pFrame->T_c_w_.translation();
-        Quaterniond estimated_quat(pFrame->T_c_w_.rotationMatrix());
+        // Vector3d estimated_trans = pFrame->T_c_w_.translation();
+        // Quaterniond estimated_quat(pFrame->T_c_w_.rotationMatrix());
 
-        fout << fixed << pFrame->time_stamp_ << " " 
-            << estimated_trans(0, 0) << " " << estimated_trans(1, 0) << " " << estimated_trans(2, 0) << " "
-            << estimated_quat.x() << " " << estimated_quat.y() << " " << estimated_quat.z() << " "
-            << estimated_quat.w() << endl;
+        vo::DatasetIO::writeEstimatedRGBD(dataset_dir, pFrame->time_stamp_, pFrame->T_c_w_);
+        // fout << fixed << pFrame->time_stamp_ << " " 
+        //     << estimated_trans(0, 0) << " " << estimated_trans(1, 0) << " " << estimated_trans(2, 0) << " "
+        //     << estimated_quat.x() << " " << estimated_quat.y() << " " << estimated_quat.z() << " "
+        //     << estimated_quat.w() << endl;
 
 
         // show the map and the camera pose 
