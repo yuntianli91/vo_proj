@@ -4,7 +4,7 @@
  * @Github: https://github.com/yuntinali91
  * @Date: 2019-07-15 08:49:29
  * @LastEditors: Yuntian Li
- * @LastEditTime: 2019-07-15 10:05:28
+ * @LastEditTime: 2019-07-15 15:16:53
  */
 #include "vo/dataset_io.h"
 
@@ -52,12 +52,14 @@ namespace vo
             DatasetIO::io_ptr_ = shared_ptr<DatasetIO>(new DatasetIO());
         }
         
-        io_ptr_->fout_.open(file_path + "/estimated_g2o.txt");        
-
         if (!io_ptr_->fout_.is_open()){
+            io_ptr_->fout_.open(file_path + "/estimated_g2o.txt");        
+
+            if (!io_ptr_->fout_.is_open()){
             cout << "Failed to write, please check file path !" << endl;
             return false;
-        }        
+            }        
+        }
 
         Eigen::Vector3d estimated_trans = T_c_w.translation();
         Eigen::Quaterniond estimated_quat(T_c_w.rotationMatrix());
